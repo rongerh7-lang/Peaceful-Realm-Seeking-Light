@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>谧境·寻光 - 治愈系轻露营交互空间</title>
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons (CDN) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- 自定义配置与样式 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-bg': '#F6F5F2',
+                        'brand-blue': '#6E778D',
+                        'brand-teal': '#88A1A0',
+                        'brand-yellow': '#E7D2A4',
+                        'brand-beige': '#E2DACF',
+                        'brand-text': '#5A6273',
+                        'brand-text-light': '#a4a9b5',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 隐藏滚动条但保留滚动功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        
+        /* 渐显动画 */
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fade-in 0.4s ease-out forwards;
+        }
+        
+        /* 底部安全区适配 */
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom, 1rem);
+        }
+
+        /* 文本阴影 */
+        .text-shadow-sm {
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex justify-center h-screen overflow-hidden text-brand-text font-sans antialiased">
+
+    <!-- App 容器 (模拟手机屏幕宽度) -->
+    <div class="w-full max-w-md h-full flex flex-col bg-brand-bg relative overflow-hidden shadow-2xl">
+        
+        <!-- 加载遮罩层 -->
+        <div id="loading-screen" class="absolute inset-0 z-[100] bg-brand-bg flex items-center justify-center text-brand-blue flex-col gap-3 transition-opacity duration-500">
+            <i data-lucide="wind" class="w-8 h-8 animate-spin"></i>
+            <span class="text-sm font-medium">微风正在拂过...</span>
+        </div>
+
+        <!-- 顶部导航条 -->
+        <header class="pt-8 pb-4 px-6 bg-gradient-to-b from-[#F6F5F2] to-transparent z-10 sticky top-0 flex-shrink-0">
+            <h1 class="text-2xl font-bold text-brand-blue flex items-center gap-2">
+                <i data-lucide="leaf" class="w-6 h-6 text-brand-teal"></i>
+                谧境·寻光
+            </h1>
+            <p class="text-xs text-brand-blue mt-1 opacity-70 tracking-wide">治愈系轻露营交互空间</p>
+        </header>
+
+        <!-- 主要内容区域 -->
+        <main class="flex-1 overflow-y-auto px-4 pb-24 space-y-4 no-scrollbar relative">
+            
+            <!-- 1. 广场视图 (Home) -->
+            <div id="view-home" class="space-y-4 animate-fade-in">
+                <!-- 每日寄语卡片 -->
+                <div class="bg-gradient-to-br from-[#E7D2A4] to-[#DFCA9B] p-5 rounded-2xl shadow-md shadow-[#E7D2A4]/20 border border-white/40 relative overflow-hidden mb-2 transform transition hover:scale-[1.01]">
+                    <i data-lucide="sun" class="absolute -bottom-6 -right-4 w-32 h-32 text-white/20 animate-[spin_12s_linear_infinite]"></i>
+                    <div class="flex items-center gap-2 mb-3 text-white/95">
+                        <i data-lucide="sun" class="w-5 h-5 fill-current"></i>
+                        <span class="text-lg font-bold tracking-widest uppercase text-shadow-sm">今日微光</span>
+                    </div>
+                    <p id="daily-quote" class="text-white text-sm font-serif leading-relaxed relative z-10 text-shadow-sm mt-1">
+                        "万物皆有裂痕，那是光照进来的地方。"
+                    </p>
+                </div>
+
+                <!-- 留言列表容器 -->
+                <div id="messages-container" class="space-y-4 pb-4">
+                    <!-- 动态渲染内容 -->
+                </div>
+            </div>
+
+            <!-- 2. 写信视图 (Write) -->
+            <div id="view-write" class="h-full flex flex-col animate-fade-in pt-4 hidden">
+                <h2 class="text-lg font-bold mb-4 text-brand-blue">留下你的微光</h2>
+                <div class="flex-1 bg-white rounded-2xl p-5 shadow-sm border border-brand-beige relative">
+                    <textarea id="write-textarea" placeholder="最近有什么开心的事，或者烦恼的事？&#10;在这里倾诉吧，也许会收到陌生人的温暖回音..." class="w-full h-full bg-transparent resize-none outline-none text-brand-text placeholder-brand-beige leading-relaxed"></textarea>
+                </div>
+                <button id="btn-post" class="mt-6 w-full py-4 rounded-xl bg-brand-blue text-white font-medium shadow-lg shadow-brand-blue/20 flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transform transition active:scale-95">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    投入树洞
+                </button>
+            </div>
+
+            <!-- 3. 我的信箱 (Inbox) -->
+            <div id="view-inbox" class="animate-fade-in hidden pb-4">
+                <div class="bg-brand-teal text-white p-6 rounded-2xl shadow-md mb-6 relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h2 class="text-lg font-medium opacity-90">我的信箱</h2>
+                        <div class="mt-2 text-3xl font-bold">
+                            <span id="total-replies">0</span> <span class="text-sm font-normal opacity-80">条温暖回音</span>
+                        </div>
+                    </div>
+                    <i data-lucide="heart" class="absolute -right-4 -bottom-4 opacity-10 text-white w-32 h-32"></i>
+                </div>
+
+                <h3 class="text-sm font-medium text-brand-blue mb-3 ml-2">我寄出的心事</h3>
+                <div id="inbox-messages-container" class="space-y-4">
+                    <!-- 动态渲染内容 -->
+                </div>
+            </div>
+        </main>
+
+        <!-- 底部导航栏 -->
+        <nav class="absolute bottom-0 w-full bg-white/90 backdrop-blur-md border-t border-brand-beige/50 pb-safe flex-shrink-0 z-20">
+            <div class="flex justify-around items-center p-3">
+                <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center gap-1 w-16 p-2 rounded-xl transition-colors text-brand-blue">
+                    <i data-lucide="wind" class="w-6 h-6"></i>
+                    <span class="text-[10px] font-medium">树洞</span>
+                </button>
+                
+                <button onclick="switchTab('write')" id="nav-write" class="flex items-center justify-center w-14 h-14 -mt-8 bg-brand-blue text-white rounded-full shadow-lg shadow-brand-blue/30 transform transition hover:scale-105 active:scale-95 border-4 border-brand-bg relative z-10">
+                    <i data-lucide="pen-tool" class="w-6 h-6"></i>
+                </button>
+                
+                <button onclick="switchTab('inbox')" id="nav-inbox" class="flex flex-col items-center gap-1 w-16 p-2 rounded-xl transition-colors text-brand-text-light relative">
+                    <div class="relative">
+                        <i data-lucide="inbox" class="w-6 h-6"></i>
+                        <span id="inbox-badge" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-brand-yellow rounded-full border-2 border-white hidden"></span>
+                    </div>
+                    <span class="text-[10px] font-medium">回音</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- 详情与回复弹窗 Modal -->
+        <div id="message-modal" class="absolute inset-0 z-50 bg-brand-bg/95 backdrop-blur-sm flex flex-col animate-fade-in hidden">
+            <header class="p-4 flex justify-between items-center bg-transparent flex-shrink-0">
+                <span id="modal-title" class="text-brand-blue font-medium text-sm">别人的心事</span>
+                <button onclick="closeModal()" class="p-2 bg-white rounded-full shadow-sm text-brand-blue/50 hover:text-brand-blue transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </header>
+
+            <div class="flex-1 overflow-y-auto px-6 pb-24 no-scrollbar">
+                <!-- 主消息卡片 -->
+                <div id="modal-main-card" class="bg-white border p-6 rounded-3xl shadow-sm mb-8 relative">
+                    <div class="absolute -top-4 left-6 text-5xl text-brand-beige font-serif">"</div>
+                    <p id="modal-main-text" class="text-brand-text text-lg leading-relaxed whitespace-pre-wrap relative z-10 pt-2"></p>
+                    <p id="modal-main-date" class="text-right mt-6 text-xs text-brand-blue/60"></p>
+                </div>
+
+                <!-- 回复列表 -->
+                <div class="space-y-4">
+                    <h4 class="text-sm font-medium text-brand-blue flex items-center gap-2 mb-4">
+                        <i data-lucide="heart" class="w-4 h-4"></i> 温暖回音 (<span id="modal-reply-count">0</span>)
+                    </h4>
+                    
+                    <div id="modal-replies-container" class="space-y-4 pb-4">
+                        <!-- 动态渲染内容 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 回复输入框 -->
+            <div class="absolute bottom-0 w-full bg-white border-t border-brand-beige/50 p-4 flex items-end gap-2 shadow-[0_-10px_20px_rgba(0,0,0,0.02)] pb-safe z-10">
+                <textarea id="reply-textarea" placeholder="写下你的温柔回音..." class="flex-1 bg-brand-bg rounded-xl px-4 py-3 text-sm resize-none outline-none text-brand-text placeholder-brand-text-light max-h-24 min-h-[44px]" rows="1"></textarea>
+                <button id="btn-reply" class="bg-brand-blue text-white p-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transform transition active:scale-95 flex-shrink-0 shadow-md shadow-brand-blue/20">
+                    <i data-lucide="send" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 核心业务逻辑 -->
+    <script type="module">
+        // 尝试导入 Firebase (仅在有服务器/网络环境下有效)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- 全局状态 ---
+        let state = {
+            user: null,
+            messages: [],
+            activeTab: 'home',
+            selectedMessageId: null,
+            isFirebaseActive: false
+        };
+
+        // 治愈系卡片背景色库
+        const CARD_COLORS = [
+            'bg-white border-[#E7D2A4]', // 暖沙黄边
+            'bg-white border-[#E2DACF]', // 灰米色边
+            'bg-white border-[#6E778D]/30', // 灰蓝色边
+            'bg-white border-[#88A1A0]/40', // 灰绿色边
+        ];
+
+        // 每日温暖语录库
+        const DAILY_QUOTES = [
+            "万物皆有裂痕，那是光照进来的地方。",
+            "今天辛苦啦，在这里找个舒服的姿势休息一下吧。",
+            "允许自己偶尔停下来，也是一种前行。",
+            "你的每一次呼吸，都在和这个世界交换温柔。",
+            "慢慢来，比较快。在这片小天地里，你可以做回自己。",
+            "别怕，光一直在。你比你想象的更充满力量。",
+            "把烦恼揉碎，随风吹走。今天也是很棒的一天。"
+        ];
+
+        // --- 工具函数 ---
+        // 获取今日寄语
+        const getDailyQuote = () => {
+            const today = new Date();
+            const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+            return DAILY_QUOTES[dayOfYear % DAILY_QUOTES.length];
+        };
+
+        // 格式化时间
+        const formatDate = (timestamp) => {
+            const date = new Date(timestamp);
+            return `${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+        };
+
+        // 防止 XSS 攻击的文本转义
+        const escapeHTML = (str) => {
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag]));
+        };
+
+        // 获取随机颜色
+        const getRandomColor = () => CARD_COLORS[Math.floor(Math.random() * CARD_COLORS.length)];
+
+        // 生成唯一ID (用于本地模拟)
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+
+        // --- DOM 更新逻辑 ---
+        
+        // 1. 渲染主广场
+        const renderHome = () => {
+            const container = document.getElementById('messages-container');
+            if (state.messages.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-20 text-[#6E778D] opacity-60">
+                        <i data-lucide="wind" class="w-12 h-12 mx-auto mb-4 opacity-40"></i>
+                        <p>这里很安静，还没有人留下心事。</p>
+                        <p class="text-sm mt-2 text-[#6E778D]/60">点击下方按钮，留下你的第一缕微光吧。</p>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = state.messages.map(msg => `
+                    <div onclick="openModal('${msg.id}')" class="${msg.color} border p-5 rounded-2xl shadow-sm cursor-pointer transform transition hover:scale-[1.02] active:scale-95">
+                        <p class="text-[#5A6273] leading-relaxed whitespace-pre-wrap line-clamp-3">${escapeHTML(msg.text)}</p>
+                        <div class="flex justify-between items-center mt-4 text-xs text-[#6E778D]/60">
+                            <span>${formatDate(msg.createdAt)}</span>
+                            <span class="flex items-center gap-1 bg-[#E2DACF]/30 px-2 py-1 rounded-full text-[#6E778D]/80">
+                                <i data-lucide="message-circle" class="w-3 h-3"></i>
+                                ${msg.replies ? msg.replies.length : 0}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            lucide.createIcons();
+        };
+
+        // 2. 渲染我的信箱
+        const renderInbox = () => {
+            const myMessages = state.messages.filter(m => m.authorId === state.user?.uid);
+            const totalReplies = myMessages.reduce((sum, msg) => sum + (msg.replies ? msg.replies.length : 0), 0);
+            
+            document.getElementById('total-replies').innerText = totalReplies;
+            
+            // 更新红点
+            const badge = document.getElementById('inbox-badge');
+            if (totalReplies > 0) badge.classList.remove('hidden');
+            else badge.classList.add('hidden');
+
+            const container = document.getElementById('inbox-messages-container');
+            if (myMessages.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 text-[#6E778D] opacity-60">
+                        <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                        <p class="text-sm">你还没有寄出过心事哦</p>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = myMessages.map(msg => `
+                    <div onclick="openModal('${msg.id}')" class="bg-white p-4 rounded-2xl shadow-sm border border-[#E2DACF]/70 cursor-pointer">
+                        <p class="text-[#5A6273] text-sm line-clamp-2">${escapeHTML(msg.text)}</p>
+                        <div class="flex justify-between items-center mt-3 text-xs text-[#6E778D]/60">
+                            <span>${formatDate(msg.createdAt)}</span>
+                            ${msg.replies && msg.replies.length > 0 ? `
+                                <span class="text-[#6E778D] flex items-center gap-1 font-medium bg-[#E7D2A4]/40 px-2 py-0.5 rounded-full">
+                                    <i data-lucide="heart" class="w-2.5 h-2.5 fill-current"></i>
+                                    收到 ${msg.replies.length} 条回音
+                                </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            }
+            lucide.createIcons();
+        };
+
+        // 3. 渲染弹窗详情
+        const renderModal = () => {
+            if (!state.selectedMessageId) return;
+            const msg = state.messages.find(m => m.id === state.selectedMessageId);
+            if (!msg) {
+                closeModal();
+                return;
+            }
+
+            document.getElementById('modal-title').innerText = msg.authorId === state.user?.uid ? '我的心事' : '别人的心事';
+            
+            const mainCard = document.getElementById('modal-main-card');
+            // 移除旧颜色
+            mainCard.className = `border p-6 rounded-3xl shadow-sm mb-8 relative bg-white ${msg.color.replace('bg-white', '')}`;
+            
+            document.getElementById('modal-main-text').innerText = msg.text;
+            document.getElementById('modal-main-date').innerText = formatDate(msg.createdAt);
+            
+            document.getElementById('modal-reply-count').innerText = msg.replies ? msg.replies.length : 0;
+            
+            const repliesContainer = document.getElementById('modal-replies-container');
+            if (msg.replies && msg.replies.length > 0) {
+                repliesContainer.innerHTML = msg.replies.map(reply => `
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-[#E2DACF]/60 ml-4 relative">
+                        <div class="absolute -left-2 top-6 w-2 h-2 rounded-full bg-[#88A1A0]"></div>
+                        <p class="text-[#5A6273] text-sm whitespace-pre-wrap">${escapeHTML(reply.text)}</p>
+                        <p class="text-xs text-[#6E778D]/50 mt-2 text-right">${formatDate(reply.createdAt)}</p>
+                    </div>
+                `).join('');
+            } else {
+                repliesContainer.innerHTML = `
+                    <p class="text-center text-sm text-[#6E778D]/50 py-8">
+                        还没有人回复哦，来成为第一个送上温暖的人吧。
+                    </p>
+                `;
+            }
+            lucide.createIcons();
+        };
+
+        // 全局重新渲染
+        const renderAll = () => {
+            renderHome();
+            renderInbox();
+            if (state.selectedMessageId) {
+                renderModal();
+            }
+        };
+
+        // --- 交互控制 ---
+
+        // 切换导航Tab (暴露到全局给onclick使用)
+        window.switchTab = (tab) => {
+            state.activeTab = tab;
+            
+            // 隐藏所有视图
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-write').classList.add('hidden');
+            document.getElementById('view-inbox').classList.add('hidden');
+            
+            // 显示目标视图
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            
+            // 更新底部导航高亮状态
+            const tabs = ['home', 'write', 'inbox'];
+            tabs.forEach(t => {
+                const navBtn = document.getElementById(`nav-${t}`);
+                if (t === 'write') return; // 中间按钮样式固定
+                
+                if (t === tab) {
+                    navBtn.classList.remove('text-brand-text-light');
+                    navBtn.classList.add('text-brand-blue');
+                } else {
+                    navBtn.classList.remove('text-brand-blue');
+                    navBtn.classList.add('text-brand-text-light');
+                }
+            });
+        };
+
+        // 打开/关闭详情弹窗
+        window.openModal = (id) => {
+            state.selectedMessageId = id;
+            renderModal();
+            document.getElementById('message-modal').classList.remove('hidden');
+            document.getElementById('reply-textarea').value = ''; // 清空回复框
+        };
+
+        window.closeModal = () => {
+            state.selectedMessageId = null;
+            document.getElementById('message-modal').classList.add('hidden');
+        };
+
+        // --- 数据操作 (Firebase 或 本地Mock) ---
+
+        let dbRef = null;
+        let authRef = null;
+        let globalAppId = 'healing-light-app';
+
+        // 绑定发送按钮事件
+        document.getElementById('btn-post').addEventListener('click', async () => {
+            const textarea = document.getElementById('write-textarea');
+            const text = textarea.value.trim();
+            if (!text || !state.user) return;
+            
+            const btn = document.getElementById('btn-post');
+            btn.disabled = true;
+
+            const newMessage = {
+                text: text,
+                authorId: state.user.uid,
+                createdAt: Date.now(),
+                color: getRandomColor(),
+                replies: []
+            };
+
+            if (state.isFirebaseActive) {
+                try {
+                    const messagesRef = collection(dbRef, 'artifacts', globalAppId, 'public', 'data', 'healing_messages');
+                    await addDoc(messagesRef, newMessage);
+                } catch (e) {
+                    console.error("发布失败", e);
+                    alert("发布失败，请检查网络。");
+                }
+            } else {
+                // 本地Mock模式
+                newMessage.id = generateId();
+                state.messages.unshift(newMessage);
+                renderAll();
+            }
+
+            textarea.value = '';
+            btn.disabled = false;
+            window.switchTab('home');
+        });
+
+        // 绑定回复按钮事件
+        document.getElementById('btn-reply').addEventListener('click', async () => {
+            const textarea = document.getElementById('reply-textarea');
+            const text = textarea.value.trim();
+            if (!text || !state.user || !state.selectedMessageId) return;
+            
+            const btn = document.getElementById('btn-reply');
+            btn.disabled = true;
+
+            const newReply = {
+                text: text,
+                authorId: state.user.uid,
+                createdAt: Date.now()
+            };
+
+            if (state.isFirebaseActive) {
+                try {
+                    const msgRef = doc(dbRef, 'artifacts', globalAppId, 'public', 'data', 'healing_messages', state.selectedMessageId);
+                    const currentMsg = state.messages.find(m => m.id === state.selectedMessageId);
+                    const newReplies = [...(currentMsg.replies || []), newReply];
+                    await updateDoc(msgRef, { replies: newReplies });
+                } catch (e) {
+                    console.error("回复失败", e);
+                }
+            } else {
+                // 本地Mock模式
+                const msgIndex = state.messages.findIndex(m => m.id === state.selectedMessageId);
+                if (msgIndex !== -1) {
+                    if (!state.messages[msgIndex].replies) state.messages[msgIndex].replies = [];
+                    state.messages[msgIndex].replies.push(newReply);
+                    renderAll();
+                }
+            }
+
+            textarea.value = '';
+            btn.disabled = false;
+        });
+
+
+        // --- 初始化应用 ---
+        const initializeAppFlow = () => {
+            // 初始化图标
+            lucide.createIcons();
+            // 设置今日寄语
+            document.getElementById('daily-quote').innerText = `"${getDailyQuote()}"`;
+
+            try {
+                // 尝试获取环境中的 Firebase 配置
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+                globalAppId = typeof __app_id !== 'undefined' ? __app_id : 'healing-light-app';
+
+                if (firebaseConfig && Object.keys(firebaseConfig).length > 0) {
+                    console.log("检测到 Firebase 配置，连接云端...");
+                    state.isFirebaseActive = true;
+                    
+                    const app = initializeApp(firebaseConfig);
+                    authRef = getAuth(app);
+                    dbRef = getFirestore(app);
+
+                    const initAuth = async () => {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(authRef, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(authRef);
+                        }
+                    };
+
+                    initAuth().then(() => {
+                        onAuthStateChanged(authRef, (user) => {
+                            state.user = user;
+                            if (user) {
+                                // 启动数据监听
+                                const messagesRef = collection(dbRef, 'artifacts', globalAppId, 'public', 'data', 'healing_messages');
+                                onSnapshot(messagesRef, (snapshot) => {
+                                    const fetchedMessages = snapshot.docs.map(doc => ({
+                                        id: doc.id,
+                                        ...doc.data()
+                                    }));
+                                    // 按时间倒序
+                                    fetchedMessages.sort((a, b) => b.createdAt - a.createdAt);
+                                    state.messages = fetchedMessages;
+                                    
+                                    renderAll();
+                                    document.getElementById('loading-screen').classList.add('opacity-0', 'pointer-events-none');
+                                });
+                            }
+                        });
+                    }).catch(e => {
+                        console.error("Firebase 认证失败，回退到本地演示模式", e);
+                        startLocalMockMode();
+                    });
+
+                } else {
+                    // 没有配置，直接进入本地演示模式
+                    startLocalMockMode();
+                }
+            } catch (e) {
+                console.error("初始化过程出错，回退到本地演示模式", e);
+                startLocalMockMode();
+            }
+        };
+
+        // 本地演示模式 (双击打开 HTML 时触发)
+        const startLocalMockMode = () => {
+            console.log("运行在本地演示模式 (Local Mock Mode)");
+            state.isFirebaseActive = false;
+            state.user = { uid: 'local_user_001' }; // 模拟当前用户
+            
+            // 塞入几条模拟的初始数据，方便展示效果
+            const mockTime = Date.now();
+            state.messages = [
+                {
+                    id: 'mock1',
+                    authorId: 'other_user',
+                    text: '马上就要期末了，好多大作业做不完，每天画图画到凌晨，感觉快坚持不下去了...',
+                    createdAt: mockTime - 1000 * 60 * 60 * 2, // 2小时前
+                    color: CARD_COLORS[2], // 灰蓝边
+                    replies: [
+                        { text: '抱抱你，我也是艺术学院的，完全懂那种感觉。记得按时吃饭，实在累了就在这把椅子上躺5分钟。一切都会过去的！', authorId: 'local_user_001', createdAt: mockTime - 1000 * 60 * 30 }
+                    ]
+                },
+                {
+                    id: 'mock2',
+                    authorId: 'local_user_001',
+                    text: '今天天气很好，阳光洒在楼道的绿植上，突然觉得生活还是很美好的。',
+                    createdAt: mockTime - 1000 * 60 * 60 * 24, // 1天前
+                    color: CARD_COLORS[0], // 沙黄边
+                    replies: [
+                        { text: '是呀！我也很喜欢这个角落的布置。', authorId: 'user_a', createdAt: mockTime - 1000 * 60 * 60 * 20 },
+                        { text: '借你的吉言，希望明天也一样是个好天气☀️', authorId: 'user_b', createdAt: mockTime - 1000 * 60 * 60 * 18 }
+                    ]
+                },
+                {
+                    id: 'mock3',
+                    authorId: 'user_c',
+                    text: '路过这里，被淡淡的薰衣草香味治愈了。谢谢设计这个角落的同学们。',
+                    createdAt: mockTime - 1000 * 60 * 60 * 48, // 2天前
+                    color: CARD_COLORS[3], // 灰绿边
+                    replies: []
+                }
+            ];
+
+            // 渲染并移除加载屏
+            renderAll();
+            setTimeout(() => {
+                document.getElementById('loading-screen').classList.add('opacity-0', 'pointer-events-none');
+            }, 800);
+        };
+
+        // 页面加载完成后执行
+        window.addEventListener('DOMContentLoaded', initializeAppFlow);
+
+    </script>
+</body>
+</html>
